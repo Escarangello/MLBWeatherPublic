@@ -271,7 +271,9 @@ def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
     home_hrs = [hr for hr in home_runs if hr['team_type'] == 'home']
     
     if away_hrs:
-        away_text = f"**{away_team_abbr}:** "
+        # Use fallback if abbreviation is empty
+        team_name = away_team_abbr if away_team_abbr else "Away"
+        away_text = f"**{team_name}:** "
         away_details = []
         for hr in away_hrs:
             detail = f"{hr['batter']} (Inning {hr['inning']})"
@@ -282,7 +284,9 @@ def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
         home_run_text.append(away_text)
     
     if home_hrs:
-        home_text = f"**{home_team_abbr}:** "
+        # Use fallback if abbreviation is empty
+        team_name = home_team_abbr if home_team_abbr else "Home"
+        home_text = f"**{team_name}:** "
         home_details = []
         for hr in home_hrs:
             detail = f"{hr['batter']} (Inning {hr['inning']})"
@@ -440,7 +444,6 @@ def main():
                 st.info("Weather data unavailable")
             
             st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown("")  # Spacing
     
     # Footer with cache information
     st.markdown("---")
