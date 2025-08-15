@@ -226,20 +226,31 @@ def get_games_data():
         # Fetch MLB games
         games = mlb_fetcher.get_todays_games()
         
-        # Fetch weather for each game
+        # Fetch weather for each game with different caching for finished games
         games_with_weather = []
         for game in games:
-            if game['coordinates'] and weather_api_key:
-                weather = weather_fetcher.get_weather_for_game(
-                    game['coordinates'], 
-                    game['game_datetime'],
-                    game['stadium_name'],
-                    game['status'])
+            # For finished games, use permanent cached weather data
+            if game['status'] in ["Final", "Game Over"]:
+                if game['coordinates'] and weather_api_key:
+                    weather = get_finished_game_weather(
+                        game['coordinates'], 
+                        game['game_datetime'],
+                        game['stadium_name'],
+                        game.get('game_pk', ''),
+                        weather_api_key
+                    )
+                else:
+                    weather = get_mock_weather(game['stadium_name'], game['status']) if game['coordinates'] else None
             else:
-                # Use mock weather data if no API key or coordinates
-                weather = get_mock_weather(
-                    game['stadium_name'], 
-                    game['status']) if game['coordinates'] else None
+                # For active/upcoming games, use regular weather updates
+                if game['coordinates'] and weather_api_key:
+                    weather = weather_fetcher.get_weather_for_game(
+                        game['coordinates'], 
+                        game['game_datetime'],
+                        game['stadium_name'],
+                        game['status'])
+                else:
+                    weather = get_mock_weather(game['stadium_name'], game['status']) if game['coordinates'] else None
             
             game['weather'] = weather
             if weather:
@@ -274,7 +285,7 @@ def track_user_activity():
     return True
 
 def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
-    """Format home run information for display."""
+    """Format home run information for display as HTML."""
     if not home_runs:
         return "No home runs hit yet"
     
@@ -285,7 +296,7 @@ def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
     if away_hrs:
         # Use fallback if abbreviation is empty
         team_name = away_team_abbr if away_team_abbr else "Away"
-        away_text = f"**{team_name}:** "
+        away_text = f"<strong>{team_name}:</strong> "
         away_details = []
         for hr in away_hrs:
             detail = f"{hr['batter']} (Inning {hr['inning']})"
@@ -298,7 +309,7 @@ def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
     if home_hrs:
         # Use fallback if abbreviation is empty
         team_name = home_team_abbr if home_team_abbr else "Home"
-        home_text = f"**{team_name}:** "
+        home_text = f"<strong>{team_name}:</strong> "
         home_details = []
         for hr in home_hrs:
             detail = f"{hr['batter']} (Inning {hr['inning']})"
