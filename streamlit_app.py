@@ -478,6 +478,9 @@ def main():
         # Stadium and status
         stadium_info = f'<div class="stadium-info">🏟️ <strong>{game["stadium_name"]}</strong> | 📊 {game["status"]}</div>'
         
+        # Escape HTML in dynamic content
+        import html
+        
         # Home runs information
         home_runs = game.get('home_runs', [])
         home_runs_html = ""
@@ -500,12 +503,13 @@ def main():
             </div>
             """
         
-        # Weather information
+        # Weather information - escape the weather string content
         weather_html = ""
         if game['weather_str']:
+            escaped_weather = html.escape(game['weather_str'])
             weather_html = f"""
             <div class="weather-info">
-                🌤️ <strong>Weather:</strong> {game['weather_str']}
+                🌤️ <strong>Weather:</strong> {escaped_weather}
             </div>
             """
         else:
