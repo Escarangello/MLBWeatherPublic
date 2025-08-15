@@ -253,6 +253,34 @@ def get_weather_data_for_game(game_pk, coordinates, game_datetime, stadium_name,
         print(f"Error fetching weather for game {game_pk}: {e}")
         return None
 
+@st.cache_data(ttl=3600, show_spinner=False)  # Cache for 1 hour since this is for finished games
+def get_weather_data_for_finished_game(game_pk, coordinates, game_datetime, stadium_name, weather_api_key):
+    """Get current weather data for a finished game and mark it as final conditions."""
+    if not coordinates:
+        return None
+        
+    try:
+        if weather_api_key:
+            weather_fetcher = WeatherFetcher(weather_api_key)
+            # Get current weather conditions at the stadium
+            weather = weather_fetcher.get_weather_for_game(
+                coordinates, 
+                None,  # Use None for current conditions instead of game time
+                stadium_name,
+                "Final"  # Mark as final status
+            )
+            if weather:
+                # Update the weather time description to indicate these are final conditions
+                weather['weather_time'] = "conditions at game end"
+        else:
+            # Use mock weather data if no API key
+            weather = get_mock_weather(stadium_name, "Final")
+        
+        return weather
+    except Exception as e:
+        print(f"Error fetching final weather for game {game_pk}: {e}")
+        return None
+
 def get_stored_final_weather(game_pk):
     """Get stored weather data for finished games."""
     if 'final_weather_cache' not in st.session_state:
@@ -287,8 +315,20 @@ def get_games_data():
                 # Try to get stored weather for finished games
                 weather = get_stored_final_weather(game_pk)
                 if not weather and game['coordinates']:
-                    # If no stored weather, get mock data as fallback
-                    weather = get_mock_weather(game['stadium_name'], game['status'])
+                    # If no stored weather, fetch current conditions and store them
+                    # This handles cases where the app starts after a game has already finished
+                    weather = get_weather_data_for_finished_game(
+                        game_pk,
+                        game['coordinates'],
+                        game['game_datetime'],
+                        game['stadium_name'],
+                        weather_api_key
+                    )
+                    if weather:
+                        store_final_weather(game_pk, weather)
+                    else:
+                        # Only use mock data as absolute last resort
+                        weather = get_mock_weather(game['stadium_name'], game['status'])
             else:
                 # For active/upcoming games, get fresh weather data
                 weather = get_weather_data_for_game(
