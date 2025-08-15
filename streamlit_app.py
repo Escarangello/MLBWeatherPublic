@@ -1,479 +1,224 @@
-#!/usr/bin/env python3
 """
-MLB Weather Widget - Streamlit Application
-Clean, mobile-friendly web interface for easy deployment and sharing.
+MLB API module for fetching game data.
+Uses the free MLB Stats API.
 """
 
-import streamlit as st
-import pandas as pd
+import requests
+import json
 from datetime import datetime, timezone, timedelta
-import os
-import time
+from stadium_coords import get_stadium_coordinates
 
-from mlb_api import MLBGameFetcher
-from weather_api import WeatherFetcher, get_mock_weather
-
-# Page configuration
-st.set_page_config(
-    page_title="MLB Weather Widget",
-    page_icon="⚾",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Enhanced CSS for better mobile experience and cleaner styling
-st.markdown("""
-<style>
-    .main-header {
-        text-align: center;
-        padding: 1.5rem 0;
-        background: linear-gradient(135deg, #1f4e79, #2e86ab, #a23b72);
-        color: white;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
+class MLBGameFetcher:
+    def __init__(self):
+        self.base_url = "https://statsapi.mlb.com/api/v1"
     
-    .main-header h1 {
-        margin: 0;
-        font-size: 2.5rem;
-        font-weight: 700;
-    }
-    
-    .main-header p {
-        margin: 0.5rem 0 0 0;
-        opacity: 0.9;
-        font-size: 1.1rem;
-    }
-    
-    .game-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        background: white;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .game-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-    }
-    
-    .live-game {
-        border-left: 6px solid #ff4444;
-        background: linear-gradient(135deg, #fff5f5, #ffffff);
-        animation: pulse-border 2s infinite;
-    }
-    
-    @keyframes pulse-border {
-        0%, 100% { border-left-color: #ff4444; }
-        50% { border-left-color: #ff6666; }
-    }
-    
-    .final-game {
-        border-left: 6px solid #28a745;
-        background: linear-gradient(135deg, #f8fff8, #ffffff);
-    }
-    
-    .delayed-game {
-        border-left: 6px solid #ff8800;
-        background: linear-gradient(135deg, #fff8f0, #ffffff);
-    }
-    
-    .scheduled-game {
-        border-left: 6px solid #007bff;
-        background: linear-gradient(135deg, #f0f8ff, #ffffff);
-    }
-    
-    .weather-info {
-        background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
-        padding: 1rem;
-        border-radius: 12px;
-        margin-top: 1rem;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 0.95rem;
-        color: #2c3e50;
-        border: 1px solid #d6e9ff;
-    }
-    
-    .home-runs-info {
-        background: linear-gradient(135deg, #fff8e1, #fffbf0);
-        padding: 1rem;
-        border-radius: 12px;
-        margin-top: 1rem;
-        border: 1px solid #ffd54f;
-        color: #e65100;
-    }
-    
-    .home-run-item {
-        background: rgba(255, 193, 7, 0.1);
-        padding: 0.5rem;
-        border-radius: 8px;
-        margin: 0.5rem 0;
-        border-left: 3px solid #ffc107;
-    }
-    
-    .game-time {
-        font-weight: 700;
-        font-size: 1.2rem;
-        color: #2c3e50;
-    }
-    
-    .live-indicator {
-        color: #ff4444;
-        font-weight: 700;
-        animation: blink 1.5s infinite;
-        text-shadow: 0 0 5px rgba(255, 68, 68, 0.5);
-    }
-    
-    @keyframes blink {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0.7; }
-    }
-    
-    .score {
-        color: #dc3545;
-        font-weight: 700;
-        font-size: 1.1rem;
-    }
-    
-    .final-score {
-        color: #28a745;
-        font-weight: 700;
-        font-size: 1.1rem;
-    }
-    
-    .team-names {
-        font-size: 1.3rem;
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stadium-info {
-        color: #6c757d;
-        font-size: 1rem;
-        margin: 0.5rem 0;
-    }
-    
-    .metrics-container {
-        background: linear-gradient(135deg, #f8f9fa, #ffffff);
-        padding: 1rem;
-        border-radius: 15px;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    
-    .footer-info {
-        text-align: center;
-        color: #6c757d;
-        font-size: 0.9rem;
-        background: linear-gradient(135deg, #f8f9fa, #ffffff);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin-top: 2rem;
-    }
-    
-    .cache-info {
-        background: linear-gradient(135deg, #e8f5e8, #f0fff0);
-        padding: 0.5rem;
-        border-radius: 8px;
-        border: 1px solid #c3e6c3;
-        font-size: 0.85rem;
-        color: #2d5a2d;
-    }
-    
-    /* Mobile responsiveness */
-    @media (max-width: 768px) {
-        .main-header h1 {
-            font-size: 2rem;
-        }
-        
-        .game-card {
-            padding: 1rem;
-        }
-        
-        .team-names {
-            font-size: 1.1rem;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-def get_cache_ttl():
-    """Get cache TTL based on Eastern Time - no refresh between 3am-10am."""
-    eastern_tz = timezone(timedelta(hours=-4))  # EDT
-    eastern_time = datetime.now(eastern_tz)
-    current_hour = eastern_time.hour
-    
-    # During quiet hours (3am-10am Eastern), use very long cache (7 hours)
-    if 3 <= current_hour < 10:
-        return 25200  # 7 hours in seconds
-    else:
-        return 600  # 10 minutes in seconds during active hours
-
-@st.cache_data(ttl=600, show_spinner=False)  # Cache for 10 minutes - shared across all users
-def get_games_data():
-    """Get games data with caching to avoid API rate limits. Only refreshes when users are active."""
-    try:
-        # Initialize API components
-        mlb_fetcher = MLBGameFetcher()
-        weather_api_key = st.secrets.get("OPENWEATHER_API_KEY", None)
-        weather_fetcher = WeatherFetcher(weather_api_key)
-        
-        # Fetch MLB games
-        games = mlb_fetcher.get_todays_games()
-        
-        # Fetch weather for each game
-        games_with_weather = []
-        for game in games:
-            if game['coordinates'] and weather_api_key:
-                weather = weather_fetcher.get_weather_for_game(
-                    game['coordinates'], 
-                    game['game_datetime'],
-                    game['stadium_name'],
-                    game['status'])
-            else:
-                # Use mock weather data if no API key or coordinates
-                weather = get_mock_weather(
-                    game['stadium_name'], 
-                    game['status']) if game['coordinates'] else None
-            
-            game['weather'] = weather
-            if weather:
-                game['weather_str'] = weather_fetcher.format_weather_string_with_stadium(
-                    weather, game['stadium_name'])
-            else:
-                game['weather_str'] = "Weather data unavailable"
-            
-            games_with_weather.append(game)
-        
-        return games_with_weather, weather_api_key is None
-        
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return [], True
-
-@st.cache_data(ttl=600, show_spinner=False)
-def get_cache_timestamp():
-    """Get cache timestamp for display purposes in Eastern Time."""
-    eastern_tz = timezone(timedelta(hours=-4))  # EDT
-    eastern_time = datetime.now(eastern_tz)
-    return eastern_time.strftime("%I:%M:%S %p")
-
-def track_user_activity():
-    """Track user activity to prevent unnecessary cache refreshes."""
-    # This function runs every time a user loads the page
-    # The cache will only refresh when this function is called (i.e., when users are active)
-    if 'last_activity' not in st.session_state:
-        st.session_state.last_activity = datetime.now()
-    else:
-        st.session_state.last_activity = datetime.now()
-    return True
-
-def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
-    """Format home run information for display."""
-    if not home_runs:
-        return "No home runs hit yet"
-    
-    home_run_text = []
-    away_hrs = [hr for hr in home_runs if hr['team_type'] == 'away']
-    home_hrs = [hr for hr in home_runs if hr['team_type'] == 'home']
-    
-    if away_hrs:
-        # Use fallback if abbreviation is empty
-        team_name = away_team_abbr if away_team_abbr else "Away"
-        away_text = f"**{team_name}:** "
-        away_details = []
-        for hr in away_hrs:
-            detail = f"{hr['batter']} (Inning {hr['inning']})"
-            if hr['distance']:
-                detail += f" - {hr['distance']} ft"
-            away_details.append(detail)
-        away_text += ", ".join(away_details)
-        home_run_text.append(away_text)
-    
-    if home_hrs:
-        # Use fallback if abbreviation is empty
-        team_name = home_team_abbr if home_team_abbr else "Home"
-        home_text = f"**{team_name}:** "
-        home_details = []
-        for hr in home_hrs:
-            detail = f"{hr['batter']} (Inning {hr['inning']})"
-            if hr['distance']:
-                detail += f" - {hr['distance']} ft"
-            home_details.append(detail)
-        home_text += ", ".join(home_details)
-        home_run_text.append(home_text)
-    
-    return " | ".join(home_run_text)
-
-def main():
-    """Main Streamlit application."""
-    
-    # Header
-    st.markdown("""
-    <div class="main-header">
-        <h1>⚾ MLB Weather Widget</h1>
-        <p>Today's games with comprehensive weather analysis and home run tracking</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Date and cache info
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        # Display date in Eastern Time
+    def get_todays_games(self):
+        """
+        Fetch today's MLB games.
+        Returns list of game dictionaries with relevant information.
+        """
+        # Get today's date in Eastern Time to ensure we get the right games
         eastern_tz = timezone(timedelta(hours=-4))  # EDT
         today_eastern = datetime.now(eastern_tz)
-        today_str = today_eastern.strftime("%A, %B %d, %Y")
-        st.subheader(f"📅 {today_str}")
-    
-    with col2:
-        # Show cache status
-        cache_time = get_cache_timestamp()
-        st.caption(f"🕐 Data cached at: {cache_time}")
-        eastern_tz = timezone(timedelta(hours=-4))
-        current_hour = datetime.now(eastern_tz).hour
-        if 3 <= current_hour < 10:
-            st.caption("⏱️ Quiet hours (3am-10am) - minimal refreshing")
-        else:
-            st.caption("⏱️ Auto-refreshes every 10 minutes")
-    
-    # Track user activity (prevents cache refresh when no users are active)
-    track_user_activity()
-    
-    # Get data
-    with st.spinner("Loading games and weather data..."):
-        games, using_mock_data = get_games_data()
-    
-    # API key warning
-    if using_mock_data:
-        st.warning("""
-        **⚠️ Using Mock Weather Data**  
-        Set the `OPENWEATHER_API_KEY` environment variable for real weather data.  
-        Get a free API key at: https://openweathermap.org/api
-        """)
-    
-    # Games display
-    if not games:
-        st.info("🏟️ No MLB games scheduled for today. Check back tomorrow!")
-        return
-    
-    # Summary metrics
-    live_games = len([g for g in games if g['status'] in ['In Progress', 'Live']])
-    final_games = len([g for g in games if g['status'] in ['Final', 'Game Over']])
-    upcoming_games = len(games) - live_games - final_games
-    total_home_runs = sum(len(game.get('home_runs', [])) for game in games)
-    
-    st.markdown('<div class="metrics-container">', unsafe_allow_html=True)
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("Total Games", len(games))
-    with col2:
-        st.metric("Live Games", live_games)
-    with col3:
-        st.metric("Final Games", final_games)
-    with col4:
-        st.metric("Upcoming Games", upcoming_games)
-    with col5:
-        st.metric("Total Home Runs", total_home_runs)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Display games
-    for i, game in enumerate(games, 1):
-        # Determine card style based on status
-        if game['status'] in ['In Progress', 'Live']:
-            card_class = "game-card live-game"
-            time_class = "live-indicator"
-        elif game['status'] in ['Final', 'Game Over']:
-            card_class = "game-card final-game"
-            time_class = ""
-        elif game['status'] == 'Delayed':
-            card_class = "game-card delayed-game"
-            time_class = ""
-        else:
-            card_class = "game-card scheduled-game"
-            time_class = ""
+        today = today_eastern.strftime("%Y-%m-%d")
+        url = f"{self.base_url}/schedule?sportId=1&date={today}"
         
-        # Game card
-        with st.container():
-            st.markdown(f'<div class="{card_class}">', unsafe_allow_html=True)
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
             
-            # Game header
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                score_info = game.get('score_info', '')
-                teams_display = f'<div class="team-names">{game["away_team"]} @ {game["home_team"]}</div>'
-                
-                if score_info:
-                    if "Final:" in score_info:
-                        teams_display += f'<span class="final-score">{score_info}</span>'
-                    else:
-                        teams_display += f'<span class="score">{score_info}</span>'
-                
-                st.markdown(teams_display, unsafe_allow_html=True)
+            games = []
+            if 'dates' in data and len(data['dates']) > 0:
+                for game_data in data['dates'][0].get('games', []):
+                    game_info = self._parse_game_data(game_data)
+                    if game_info:
+                        games.append(game_info)
             
-            with col2:
-                if time_class:
-                    st.markdown(f"<span class='{time_class} game-time'>{game['game_time']}</span>", 
-                               unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<span class='game-time'>{game['game_time']}</span>", 
-                               unsafe_allow_html=True)
+            return games
             
-            # Stadium and status
-            st.markdown(f'<div class="stadium-info">🏟️ <strong>{game["stadium_name"]}</strong> | 📊 {game["status"]}</div>', 
-                       unsafe_allow_html=True)
-            
-            # Home runs information
-            home_runs = game.get('home_runs', [])
-            if home_runs:
-                hr_display = format_home_runs_display(
-                    home_runs, 
-                    game.get('away_team_abbr', game['away_team'][:3]), 
-                    game.get('home_team_abbr', game['home_team'][:3])
-                )
-                st.markdown(f"""
-                <div class="home-runs-info">
-                    ⚾ <strong>Home Runs ({len(home_runs)}):</strong><br>
-                    {hr_display}
-                </div>
-                """, unsafe_allow_html=True)
-            elif game['status'] in ["In Progress", "Live", "Final", "Game Over"]:
-                st.markdown("""
-                <div class="home-runs-info">
-                    ⚾ <strong>Home Runs:</strong> None hit yet
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Weather information
-            if game['weather_str']:
-                st.markdown(f"""
-                <div class="weather-info">
-                    🌤️ <strong>Weather:</strong> {game['weather_str']}
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.info("Weather data unavailable")
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+        except requests.RequestException as e:
+            print(f"Error fetching MLB data: {e}")
+            return []
+        except json.JSONDecodeError as e:
+            print(f"Error parsing MLB data: {e}")
+            return []
     
-    # Footer with cache information
-    st.markdown("---")
-    cache_time = get_cache_timestamp()
-    st.markdown(f"""
-    <div class="footer-info">
-        <p><strong>📊 Game Summary:</strong> {len(games)} total games | {total_home_runs} home runs hit today</p>
-        <p><strong>🕐 Time Zone:</strong> All times displayed in Eastern Time</p>
-        <p><strong>⚾ Features:</strong> Real-time scores, home run tracking, and physics-based weather analysis</p>
-        <p><strong>💾 Smart Caching:</strong> Data cached at {cache_time} | Shared across all users | 10min refresh (quiet 3am-10am ET)</p>
-        <p><strong>🔄 Automatic Updates:</strong> Refreshes every 10 minutes during active hours | No refresh 3am-10am Eastern</p>
-    </div>
-    """, unsafe_allow_html=True)
+    def _parse_game_data(self, game_data):
+        """
+        Parse individual game data from MLB API response.
+        """
+        try:
+            # Extract basic game info
+            away_team = game_data['teams']['away']['team']['name']
+            home_team = game_data['teams']['home']['team']['name']
+            away_team_abbr = game_data['teams']['away']['team'].get('abbreviation', '')
+            home_team_abbr = game_data['teams']['home']['team'].get('abbreviation', '')
+            game_pk = game_data.get('gamePk')
+            
+            # Get game status first
+            status = game_data.get('status', {}).get('detailedState', 'Scheduled')
+            
+            # Get game time and convert to Eastern Time
+            game_datetime = game_data.get('gameDate', '')
+            if game_datetime:
+                # Convert from UTC to Eastern Time (EDT is UTC-4, EST is UTC-5)
+                dt_utc = datetime.fromisoformat(game_datetime.replace('Z', '+00:00'))
+                # Convert to Eastern Time (currently EDT in August)
+                dt_eastern = dt_utc.replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=-4)))
+                
+                # Format time display based on game status
+                if status in ["In Progress", "Live"]:
+                    # For games in progress, show "LIVE"
+                    game_time = "LIVE"
+                elif status in ["Final", "Game Over"]:
+                    # For finished games, show "FINAL"
+                    game_time = "FINAL"
+                elif status in ["Delayed"]:
+                    # For delayed games, show original time with status
+                    original_time = dt_eastern.strftime("%I:%M %p").lstrip('0')
+                    game_time = f"{original_time} (Delayed)"
+                elif status in ["Postponed"]:
+                    game_time = "POSTPONED"
+                else:
+                    # For scheduled games, show the Eastern start time
+                    game_time = dt_eastern.strftime("%I:%M %p").lstrip('0')
+            else:
+                game_time = "TBD"
+            
+            # Get score and inning information for live and final games
+            score_info = ""
+            if status in ["In Progress", "Live"]:
+                try:
+                    away_score = game_data['teams']['away'].get('score', 0)
+                    home_score = game_data['teams']['home'].get('score', 0)
+                    
+                    # Get inning information
+                    linescore = game_data.get('linescore', {})
+                    current_inning = linescore.get('currentInning', 1)
+                    inning_state = linescore.get('inningState', 'Top')  # Top, Middle, Bottom
+                    
+                    if inning_state == "Middle":
+                        inning_display = f"Mid {current_inning}"
+                    else:
+                        inning_display = f"{inning_state} {current_inning}"
+                    
+                    score_info = f" - {away_score}-{home_score}, {inning_display}"
+                except (KeyError, TypeError):
+                    # If score data is not available
+                    pass
+            elif status in ["Final", "Game Over"]:
+                try:
+                    away_score = game_data['teams']['away'].get('score', 0)
+                    home_score = game_data['teams']['home'].get('score', 0)
+                    score_info = f" - Final: {away_score}-{home_score}"
+                except (KeyError, TypeError):
+                    pass
+            
+            # Get venue information
+            venue = game_data.get('venue', {})
+            stadium_name = venue.get('name', 'Unknown Stadium')
+            
+            # Get coordinates for weather lookup
+            coordinates = get_stadium_coordinates(stadium_name)
+            
+            # Get home run information if available
+            home_runs_info = []
+            if game_pk and status in ["In Progress", "Live", "Final", "Game Over"]:
+                home_runs_info = self._get_home_runs_for_game(game_pk)
+            
+            return {
+                'away_team': away_team,
+                'home_team': home_team,
+                'away_team_abbr': away_team_abbr,
+                'home_team_abbr': home_team_abbr,
+                'game_time': game_time,
+                'stadium_name': stadium_name,
+                'coordinates': coordinates,
+                'status': status,
+                'game_datetime': game_datetime,
+                'score_info': score_info,
+                'home_runs': home_runs_info,
+                'game_pk': game_pk
+            }
+            
+        except KeyError as e:
+            print(f"Error parsing game data: missing key {e}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error parsing game data: {e}")
+            return None
+    
+    def _get_home_runs_for_game(self, game_pk):
+        """
+        Fetch home run data for a specific game.
+        """
+        try:
+            url = f"{self.base_url}/game/{game_pk}/playByPlay"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            home_runs = []
+            plays = data.get('allPlays', [])
+            
+            for play in plays:
+                result = play.get('result', {})
+                if result.get('eventType') == 'home_run':
+                    # Get batter info
+                    batter = play.get('matchup', {}).get('batter', {})
+                    batter_name = batter.get('fullName', 'Unknown')
+                    
+                    # Get team info
+                    batting_team = play.get('about', {}).get('halfInning', '')
+                    if batting_team == 'top':
+                        team_type = 'away'
+                    else:
+                        team_type = 'home'
+                    
+                    # Get inning
+                    inning = play.get('about', {}).get('inning', 0)
+                    
+                    # Get description for distance if available
+                    description = result.get('description', '')
+                    distance = None
+                    if 'feet' in description:
+                        # Try to extract distance from description
+                        import re
+                        distance_match = re.search(r'(\d+)\s*feet', description)
+                        if distance_match:
+                            distance = int(distance_match.group(1))
+                    
+                    home_runs.append({
+                        'batter': batter_name,
+                        'team_type': team_type,
+                        'inning': inning,
+                        'description': description,
+                        'distance': distance
+                    })
+            
+            return home_runs
+            
+        except Exception as e:
+            print(f"Error fetching home run data for game {game_pk}: {e}")
+            return []
+
+def test_mlb_api():
+    """
+    Test function to verify MLB API is working.
+    """
+    fetcher = MLBGameFetcher()
+    games = fetcher.get_todays_games()
+    
+    print(f"Found {len(games)} games today:")
+    for game in games:
+        print(f"  {game['game_time']}: {game['away_team']} @ {game['home_team']}")
+        print(f"    Stadium: {game['stadium_name']}")
+        print(f"    Coordinates: {game['coordinates']}")
+        print(f"    Status: {game['status']}")
+        if game.get('home_runs'):
+            print(f"    Home runs: {len(game['home_runs'])}")
+        print()
 
 if __name__ == "__main__":
-    main()
+    test_mlb_api()
