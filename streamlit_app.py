@@ -235,7 +235,7 @@ def get_games_data():
         # Fetch weather for each game with different caching for finished games
         games_with_weather = []
         for game in games:
-            # For finished games, use permanent cached weather data
+            # For finished games, use permanent cached weather data (don't update weather)
             if game['status'] in ["Final", "Game Over"]:
                 if game['coordinates'] and weather_api_key:
                     weather = get_finished_game_weather(
