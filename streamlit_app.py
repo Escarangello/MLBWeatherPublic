@@ -213,7 +213,7 @@ def get_cache_ttl():
     if 3 <= current_hour < 10:
         return 25200  # 7 hours in seconds
     else:
-        return 600  # 10 minutes in seconds during active hours
+        return 1800  # 30 minutes in seconds during active hours
 
 @st.cache_data(ttl=30, show_spinner=False)  # Cache game data for 30 seconds
 def get_games_data_only():
@@ -226,7 +226,7 @@ def get_games_data_only():
         st.error(f"Error fetching game data: {e}")
         return []
 
-@st.cache_data(ttl=600, show_spinner=False)  # Cache weather data for 10 minutes
+@st.cache_data(ttl=1800, show_spinner=False)  # Cache weather data for 30 minutes
 def get_weather_data_for_game(game_pk, coordinates, game_datetime, stadium_name, game_status, weather_api_key):
     """Get weather data for a specific game, but only if game is not finished."""
     # Don't fetch new weather for finished games
@@ -372,7 +372,7 @@ def get_games_data():
                         # Only use mock data as absolute last resort
                         weather = get_mock_weather(game['stadium_name'], game['status'])
             elif game['status'] in ["In Progress", "Live"]:
-                # For live games, get fresh weather data every 10 minutes
+                # For live games, get fresh weather data every 30 minutes
                 weather = get_weather_data_for_game(
                     game_pk,
                     game['coordinates'],
@@ -419,7 +419,7 @@ def get_games_data():
         st.error(f"Error fetching data: {e}")
         return [], True
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner=False)
 def get_cache_timestamp():
     """Get cache timestamp for display purposes in Eastern Time."""
     eastern_tz = timezone(timedelta(hours=-4))  # EDT
@@ -619,10 +619,11 @@ def main():
         <p><strong>📊 Game Summary:</strong> {len(games)} total games | {total_home_runs} home runs hit today</p>
         <p><strong>🕐 Time Zone:</strong> All times displayed in Eastern Time</p>
         <p><strong>⚾ Features:</strong> Real-time scores, home run tracking, and physics-based weather analysis</p>
-        <p><strong>💾 Smart Caching:</strong> Game data: 30s refresh | Scheduled games: Forecast once | Live games: Weather 10min | Final games: Preserve weather</p>
-        <p><strong>🔄 API Optimization:</strong> Scheduled games get forecast once to save API requests | Live games get fresh weather every 10min | Game scores update every 30s</p>
+        <p><strong>💾 Smart Caching:</strong> Game data: 30s refresh | Scheduled games: Forecast once | Live games: Weather 30min | Final games: Preserve weather</p>
+        <p><strong>🔄 API Optimization:</strong> Scheduled games get forecast once to save API requests | Live games get fresh weather every 30min | Game scores update every 30s</p>
     </div>
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
+
