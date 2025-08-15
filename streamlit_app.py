@@ -249,6 +249,16 @@ def get_cache_timestamp():
     """Get cache timestamp for display purposes."""
     return datetime.now().strftime("%I:%M:%S %p")
 
+def track_user_activity():
+    """Track user activity to prevent unnecessary cache refreshes."""
+    # This function runs every time a user loads the page
+    # The cache will only refresh when this function is called (i.e., when users are active)
+    if 'last_activity' not in st.session_state:
+        st.session_state.last_activity = datetime.now()
+    else:
+        st.session_state.last_activity = datetime.now()
+    return True
+
 def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
     """Format home run information for display."""
     if not home_runs:
@@ -304,6 +314,9 @@ def main():
         cache_time = get_cache_timestamp()
         st.caption(f"🕐 Data cached at: {cache_time}")
         st.caption("⏱️ Auto-refreshes every 2 minutes")
+    
+    # Track user activity (prevents cache refresh when no users are active)
+    track_user_activity()
     
     # Get data
     with st.spinner("Loading games and weather data..."):

@@ -59,10 +59,10 @@ class MLBGameFetcher:
             # Get game time and convert to Eastern Time
             game_datetime = game_data.get('gameDate', '')
             if game_datetime:
-                # Convert from UTC to Eastern Time (UTC-5 in winter, UTC-4 in summer)
+                # Convert from UTC to Eastern Time (EDT is UTC-4, EST is UTC-5)
                 dt_utc = datetime.fromisoformat(game_datetime.replace('Z', '+00:00'))
-                # Simple Eastern Time conversion (assumes EDT in summer)
-                dt_eastern = dt_utc - timedelta(hours=4)  # EDT offset
+                # Convert to Eastern Time (currently EDT in August)
+                dt_eastern = dt_utc.replace(tzinfo=timezone.utc).astimezone(timezone(timedelta(hours=-4)))
                 
                 # Format time display based on game status
                 if status in ["In Progress", "Live"]:
