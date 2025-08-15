@@ -17,7 +17,10 @@ class MLBGameFetcher:
         Fetch today's MLB games.
         Returns list of game dictionaries with relevant information.
         """
-        today = datetime.now().strftime("%Y-%m-%d")
+        # Get today's date in Eastern Time to ensure we get the right games
+        eastern_tz = timezone(timedelta(hours=-4))  # EDT
+        today_eastern = datetime.now(eastern_tz)
+        today = today_eastern.strftime("%Y-%m-%d")
         url = f"{self.base_url}/schedule?sportId=1&date={today}"
         
         try:

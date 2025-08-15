@@ -6,7 +6,7 @@ Clean, mobile-friendly web interface for easy deployment and sharing.
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import os
 import time
 
@@ -202,9 +202,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-@st.cache_data(ttl=120)  # Cache for 2 minutes - shared across all users
+@st.cache_data(ttl=120, show_spinner=False)  # Cache for 2 minutes - shared across all users
 def get_games_data():
-    """Get games data with caching to avoid API rate limits."""
+    """Get games data with caching to avoid API rate limits. Only refreshes when users are active."""
     try:
         # Initialize API components
         mlb_fetcher = MLBGameFetcher()
@@ -244,10 +244,12 @@ def get_games_data():
         st.error(f"Error fetching data: {e}")
         return [], True
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=120, show_spinner=False)
 def get_cache_timestamp():
-    """Get cache timestamp for display purposes."""
-    return datetime.now().strftime("%I:%M:%S %p")
+    """Get cache timestamp for display purposes in Eastern Time."""
+    eastern_tz = timezone(timedelta(hours=-4))  # EDT
+    eastern_time = datetime.now(eastern_tz)
+    return eastern_time.strftime("%I:%M:%S %p")
 
 def track_user_activity():
     """Track user activity to prevent unnecessary cache refreshes."""
@@ -306,7 +308,10 @@ def main():
     # Date and cache info
     col1, col2 = st.columns([2, 1])
     with col1:
-        today_str = datetime.now().strftime("%A, %B %d, %Y")
+        # Display date in Eastern Time
+        eastern_tz = timezone(timedelta(hours=-4))  # EDT
+        today_eastern = datetime.now(eastern_tz)
+        today_str = today_eastern.strftime("%A, %B %d, %Y")
         st.subheader(f"📅 {today_str}")
     
     with col2:
