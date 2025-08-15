@@ -20,9 +20,9 @@ STADIUM_COORDINATES = {
     "Kauffman Stadium": (39.0517, -94.4803),  # Kansas City Royals
     "Target Field": (44.9817, -93.2776),  # Minnesota Twins
     
-    "Minute Maid Park": (29.7570, -95.3551),  # Houston Astros
+    "Daikin Park": (29.7570, -95.3551),  # Houston Astros
     "Angel Stadium": (33.8003, -117.8827),  # Los Angeles Angels
-    "Oakland Coliseum": (37.7516, -122.2005),  # Oakland Athletics
+    "Sutter Health Park": (38.58053, -121.51332),  # Oakland Athletics
     "T-Mobile Park": (47.5914, -122.3326),  # Seattle Mariners
     "Globe Life Field": (32.7473, -97.0814),  # Texas Rangers
     
@@ -62,9 +62,9 @@ STADIUM_ORIENTATIONS = {
     "Kauffman Stadium": 90,  # E
     "Target Field": 105,  # ESE
     
-    "Minute Maid Park": 105,  # ESE (left field wall creates unique angles)
+    "Daikin Park": 105,  # ESE (left field wall creates unique angles)
     "Angel Stadium": 90,  # E
-    "Oakland Coliseum": 90,  # E
+    "Sutter Health Park": 65,  # ENE
     "T-Mobile Park": 90,  # E
     "Globe Life Field": 90,  # E
     
@@ -107,3 +107,4 @@ def get_all_stadiums():
     Get all stadium names.
     """
     return list(STADIUM_COORDINATES.keys())
+
