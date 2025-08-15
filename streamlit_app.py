@@ -9,6 +9,7 @@ import pandas as pd
 from datetime import datetime, timezone, timedelta
 import os
 import time
+import textwrap
 
 from mlb_api import MLBGameFetcher
 from weather_api import WeatherFetcher, get_mock_weather
@@ -532,7 +533,7 @@ def main():
         </div>
         """
         
-        st.markdown(complete_card_html, unsafe_allow_html=True)
+        st.markdown(textwrap.dedent(complete_card_html), unsafe_allow_html=True)
     
     # Footer with cache information
     st.markdown("---")
