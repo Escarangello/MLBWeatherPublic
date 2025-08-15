@@ -295,6 +295,48 @@ def store_final_weather(game_pk, weather_data):
     
     st.session_state.final_weather_cache[game_pk] = weather_data
 
+def get_stored_scheduled_weather(game_pk):
+    """Get stored weather forecast for scheduled games."""
+    if 'scheduled_weather_cache' not in st.session_state:
+        st.session_state.scheduled_weather_cache = {}
+    
+    return st.session_state.scheduled_weather_cache.get(game_pk)
+
+def store_scheduled_weather(game_pk, weather_data):
+    """Store weather forecast for a scheduled game."""
+    if 'scheduled_weather_cache' not in st.session_state:
+        st.session_state.scheduled_weather_cache = {}
+    
+    st.session_state.scheduled_weather_cache[game_pk] = weather_data
+
+@st.cache_data(ttl=3600, show_spinner=False)  # Cache for 1 hour for scheduled games
+def get_weather_forecast_for_scheduled_game(game_pk, coordinates, game_datetime, stadium_name, weather_api_key):
+    """Get weather forecast for a scheduled game (fetch once and store)."""
+    if not coordinates:
+        return None
+        
+    try:
+        if weather_api_key:
+            weather_fetcher = WeatherFetcher(weather_api_key)
+            # Get forecast for game time
+            weather = weather_fetcher.get_weather_for_game(
+                coordinates, 
+                game_datetime,
+                stadium_name,
+                "Scheduled"
+            )
+            if weather:
+                # Update the weather time description to indicate this is a forecast
+                weather['weather_time'] = f"forecast for game time"
+        else:
+            # Use mock weather data if no API key
+            weather = get_mock_weather(stadium_name, "Scheduled")
+        
+        return weather
+    except Exception as e:
+        print(f"Error fetching forecast for scheduled game {game_pk}: {e}")
+        return None
+
 def get_games_data():
     """Get complete games data with appropriate caching for games and weather."""
     try:
@@ -329,8 +371,8 @@ def get_games_data():
                     else:
                         # Only use mock data as absolute last resort
                         weather = get_mock_weather(game['stadium_name'], game['status'])
-            else:
-                # For active/upcoming games, get fresh weather data
+            elif game['status'] in ["In Progress", "Live"]:
+                # For live games, get fresh weather data every 10 minutes
                 weather = get_weather_data_for_game(
                     game_pk,
                     game['coordinates'],
@@ -339,10 +381,27 @@ def get_games_data():
                     game['status'],
                     weather_api_key
                 )
-                
-                # If game just finished, store its weather data
-                if game['status'] in ["Final", "Game Over"] and weather:
-                    store_final_weather(game_pk, weather)
+            else:
+                # For scheduled games, fetch forecast once and store it
+                weather = get_stored_scheduled_weather(game_pk)
+                if not weather and game['coordinates']:
+                    # Fetch forecast for game time (only once)
+                    weather = get_weather_forecast_for_scheduled_game(
+                        game_pk,
+                        game['coordinates'],
+                        game['game_datetime'],
+                        game['stadium_name'],
+                        weather_api_key
+                    )
+                    if weather:
+                        store_scheduled_weather(game_pk, weather)
+                    else:
+                        # Use mock data as fallback
+                        weather = get_mock_weather(game['stadium_name'], game['status'])
+            
+            # If game just finished, store its weather data
+            if game['status'] in ["Final", "Game Over"] and weather:
+                store_final_weather(game_pk, weather)
             
             # Format weather string
             game['weather'] = weather
@@ -438,8 +497,8 @@ def main():
         # Show cache status
         cache_time = get_cache_timestamp()
         st.caption(f"🕐 Data cached at: {cache_time}")
-        st.caption("⏱️ Games: 30s | Weather: 10min")
-        st.caption("🏁 Final games keep last weather")
+        st.caption("⏱️ Games: 30s | Weather: Smart")
+        st.caption("📅 Scheduled: Forecast once | 🔴 Live: 10min")
     
     # Track user activity (prevents cache refresh when no users are active)
     track_user_activity()
@@ -560,8 +619,8 @@ def main():
         <p><strong>📊 Game Summary:</strong> {len(games)} total games | {total_home_runs} home runs hit today</p>
         <p><strong>🕐 Time Zone:</strong> All times displayed in Eastern Time</p>
         <p><strong>⚾ Features:</strong> Real-time scores, home run tracking, and physics-based weather analysis</p>
-        <p><strong>💾 Smart Caching:</strong> Game data: 30s refresh | Weather data: 10min refresh | Final games preserve weather</p>
-        <p><strong>🔄 Live Updates:</strong> Game scores and innings update every 30 seconds | Weather updates every 10 minutes for active games only</p>
+        <p><strong>💾 Smart Caching:</strong> Game data: 30s refresh | Scheduled games: Forecast once | Live games: Weather 10min | Final games: Preserve weather</p>
+        <p><strong>🔄 API Optimization:</strong> Scheduled games get forecast once to save API requests | Live games get fresh weather every 10min | Game scores update every 30s</p>
     </div>
     """, unsafe_allow_html=True)
 
