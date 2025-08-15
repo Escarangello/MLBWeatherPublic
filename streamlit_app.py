@@ -202,7 +202,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-@st.cache_data(ttl=120, show_spinner=False)  # Cache for 2 minutes - shared across all users
+def get_cache_ttl():
+    """Get cache TTL based on Eastern Time - no refresh between 3am-10am."""
+    eastern_tz = timezone(timedelta(hours=-4))  # EDT
+    eastern_time = datetime.now(eastern_tz)
+    current_hour = eastern_time.hour
+    
+    # During quiet hours (3am-10am Eastern), use very long cache (7 hours)
+    if 3 <= current_hour < 10:
+        return 25200  # 7 hours in seconds
+    else:
+        return 600  # 10 minutes in seconds during active hours
+
+@st.cache_data(ttl=600, show_spinner=False)  # Cache for 10 minutes - shared across all users
 def get_games_data():
     """Get games data with caching to avoid API rate limits. Only refreshes when users are active."""
     try:
@@ -244,7 +256,7 @@ def get_games_data():
         st.error(f"Error fetching data: {e}")
         return [], True
 
-@st.cache_data(ttl=120, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def get_cache_timestamp():
     """Get cache timestamp for display purposes in Eastern Time."""
     eastern_tz = timezone(timedelta(hours=-4))  # EDT
@@ -322,7 +334,12 @@ def main():
         # Show cache status
         cache_time = get_cache_timestamp()
         st.caption(f"🕐 Data cached at: {cache_time}")
-        st.caption("⏱️ Auto-refreshes every 2 minutes")
+        eastern_tz = timezone(timedelta(hours=-4))
+        current_hour = datetime.now(eastern_tz).hour
+        if 3 <= current_hour < 10:
+            st.caption("⏱️ Quiet hours (3am-10am) - minimal refreshing")
+        else:
+            st.caption("⏱️ Auto-refreshes every 10 minutes")
     
     # Track user activity (prevents cache refresh when no users are active)
     track_user_activity()
@@ -453,8 +470,8 @@ def main():
         <p><strong>📊 Game Summary:</strong> {len(games)} total games | {total_home_runs} home runs hit today</p>
         <p><strong>🕐 Time Zone:</strong> All times displayed in Eastern Time</p>
         <p><strong>⚾ Features:</strong> Real-time scores, home run tracking, and physics-based weather analysis</p>
-        <p><strong>💾 Smart Caching:</strong> Data cached at {cache_time} | Shared across all users | Auto-refreshes every 2 minutes</p>
-        <p><strong>🔄 Automatic Updates:</strong> Data refreshes automatically every 2 minutes | Minimizes API usage across all users</p>
+        <p><strong>💾 Smart Caching:</strong> Data cached at {cache_time} | Shared across all users | 10min refresh (quiet 3am-10am ET)</p>
+        <p><strong>🔄 Automatic Updates:</strong> Refreshes every 10 minutes during active hours | No refresh 3am-10am Eastern</p>
     </div>
     """, unsafe_allow_html=True)
 
