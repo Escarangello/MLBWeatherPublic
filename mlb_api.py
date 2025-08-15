@@ -21,7 +21,7 @@ class MLBGameFetcher:
         eastern_tz = timezone(timedelta(hours=-4))  # EDT
         today_eastern = datetime.now(eastern_tz)
         today = today_eastern.strftime("%Y-%m-%d")
-        url = f"{self.base_url}/schedule?sportId=1&date={today}"
+        url = f"{self.base_url}/schedule?sportId=1&date={today}&hydrate=linescore"
         
         try:
             response = requests.get(url, timeout=10)

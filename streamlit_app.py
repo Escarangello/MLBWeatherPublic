@@ -458,68 +458,81 @@ def main():
             card_class = "game-card scheduled-game"
             time_class = ""
         
-        # Game card
-        with st.container():
-            st.markdown(f'<div class="{card_class}">', unsafe_allow_html=True)
-            
-            # Game header
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                score_info = game.get('score_info', '')
-                teams_display = f'<div class="team-names">{game["away_team"]} @ {game["home_team"]}</div>'
-                
-                if score_info:
-                    if "Final:" in score_info:
-                        teams_display += f'<span class="final-score">{score_info}</span>'
-                    else:
-                        teams_display += f'<span class="score">{score_info}</span>'
-                
-                st.markdown(teams_display, unsafe_allow_html=True)
-            
-            with col2:
-                if time_class:
-                    st.markdown(f"<span class='{time_class} game-time'>{game['game_time']}</span>", 
-                               unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<span class='game-time'>{game['game_time']}</span>", 
-                               unsafe_allow_html=True)
-            
-            # Stadium and status
-            st.markdown(f'<div class="stadium-info">🏟️ <strong>{game["stadium_name"]}</strong> | 📊 {game["status"]}</div>', 
-                       unsafe_allow_html=True)
-            
-            # Home runs information
-            home_runs = game.get('home_runs', [])
-            if home_runs:
-                hr_display = format_home_runs_display(
-                    home_runs, 
-                    game.get('away_team_abbr', game['away_team'][:3]), 
-                    game.get('home_team_abbr', game['home_team'][:3])
-                )
-                st.markdown(f"""
-                <div class="home-runs-info">
-                    ⚾ <strong>Home Runs ({len(home_runs)}):</strong><br>
-                    {hr_display}
-                </div>
-                """, unsafe_allow_html=True)
-            elif game['status'] in ["In Progress", "Live", "Final", "Game Over"]:
-                st.markdown("""
-                <div class="home-runs-info">
-                    ⚾ <strong>Home Runs:</strong> None hit yet
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Weather information
-            if game['weather_str']:
-                st.markdown(f"""
-                <div class="weather-info">
-                    🌤️ <strong>Weather:</strong> {game['weather_str']}
-                </div>
-                """, unsafe_allow_html=True)
+        # Build complete game card content in a single markdown block
+        score_info = game.get('score_info', '')
+        
+        # Team names and score
+        teams_display = f'<div class="team-names">{game["away_team"]} @ {game["home_team"]}</div>'
+        if score_info:
+            if "Final:" in score_info:
+                teams_display += f'<span class="final-score">{score_info}</span>'
             else:
-                st.info("Weather data unavailable")
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+                teams_display += f'<span class="score">{score_info}</span>'
+        
+        # Game time
+        if time_class:
+            time_display = f'<span class="{time_class} game-time">{game["game_time"]}</span>'
+        else:
+            time_display = f'<span class="game-time">{game["game_time"]}</span>'
+        
+        # Stadium and status
+        stadium_info = f'<div class="stadium-info">🏟️ <strong>{game["stadium_name"]}</strong> | 📊 {game["status"]}</div>'
+        
+        # Home runs information
+        home_runs = game.get('home_runs', [])
+        home_runs_html = ""
+        if home_runs:
+            hr_display = format_home_runs_display(
+                home_runs, 
+                game.get('away_team_abbr', game['away_team'][:3]), 
+                game.get('home_team_abbr', game['home_team'][:3])
+            )
+            home_runs_html = f"""
+            <div class="home-runs-info">
+                ⚾ <strong>Home Runs ({len(home_runs)}):</strong><br>
+                {hr_display}
+            </div>
+            """
+        elif game['status'] in ["In Progress", "Live", "Final", "Game Over"]:
+            home_runs_html = """
+            <div class="home-runs-info">
+                ⚾ <strong>Home Runs:</strong> None hit yet
+            </div>
+            """
+        
+        # Weather information
+        weather_html = ""
+        if game['weather_str']:
+            weather_html = f"""
+            <div class="weather-info">
+                🌤️ <strong>Weather:</strong> {game['weather_str']}
+            </div>
+            """
+        else:
+            weather_html = """
+            <div class="weather-info">
+                🌤️ <strong>Weather:</strong> Weather data unavailable
+            </div>
+            """
+        
+        # Combine everything into a single markdown block
+        complete_card_html = f"""
+        <div class="{card_class}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div style="flex: 1;">
+                    {teams_display}
+                </div>
+                <div style="text-align: right;">
+                    {time_display}
+                </div>
+            </div>
+            {stadium_info}
+            {home_runs_html}
+            {weather_html}
+        </div>
+        """
+        
+        st.markdown(complete_card_html, unsafe_allow_html=True)
     
     # Footer with cache information
     st.markdown("---")
