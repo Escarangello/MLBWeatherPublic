@@ -516,9 +516,9 @@ class WeatherFetcher:
         if hr_factor:
             carry_diff = hr_factor['carry_difference']
             if carry_diff > 0:
-                hr_desc = f"Home runs carry +{carry_diff} ft ({hr_factor['description'].lower()})"
+                hr_desc = f"Fly balls carry +{carry_diff} ft ({hr_factor['description'].lower()})"
             elif carry_diff < 0:
-                hr_desc = f"Home runs carry {carry_diff} ft ({hr_factor['description'].lower()})"
+                hr_desc = f"Fly balls carry {carry_diff} ft ({hr_factor['description'].lower()})"
             else:
                 hr_desc = f"Average home run conditions"
             
@@ -589,3 +589,4 @@ def test_weather_api():
 
 if __name__ == "__main__":
     test_weather_api()
+
