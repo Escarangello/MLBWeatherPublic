@@ -426,27 +426,14 @@ def main():
                 game.get('away_team_abbr', game['away_team'][:3]), 
                 game.get('home_team_abbr', game['home_team'][:3])
             )
-            home_runs_html = f"""
-            <div class="home-runs-info">
-                ⚾ <strong>Home Runs ({len(home_runs)}):</strong><br>
-                {hr_display}
-            </div>
-            """
+            home_runs_html = f'<div class="home-runs-info">⚾ <strong>Home Runs ({len(home_runs)}):</strong><br>{hr_display}</div>'
         elif game['status'] in ["In Progress", "Live", "Final", "Game Over"]:
-            home_runs_html = """
-            <div class="home-runs-info">
-                ⚾ <strong>Home Runs:</strong> None hit yet
-            </div>
-            """
+            home_runs_html = '<div class="home-runs-info">⚾ <strong>Home Runs:</strong> None hit yet</div>'
         
         # Weather information
         weather_html = ""
         if game['weather_str']:
-            weather_html = f"""
-            <div class="weather-info">
-                🌤️ <strong>Weather:</strong> {game['weather_str']}
-            </div>
-            """
+            weather_html = f'<div class="weather-info">🌤️ <strong>Weather:</strong> {game["weather_str"]}</div>'
         
         # Complete game card HTML
         st.markdown(f"""
