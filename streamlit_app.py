@@ -214,33 +214,96 @@ def get_cache_ttl():
     else:
         return 600  # 10 minutes in seconds during active hours
 
-@st.cache_data(ttl=600, show_spinner=False)  # Cache for 10 minutes - shared across all users
-def get_games_data():
-    """Get games data with caching to avoid API rate limits. Only refreshes when users are active."""
+@st.cache_data(ttl=30, show_spinner=False)  # Cache game data for 30 seconds
+def get_games_data_only():
+    """Get only MLB game data with frequent updates for live scores."""
     try:
-        # Initialize API components
         mlb_fetcher = MLBGameFetcher()
+        games = mlb_fetcher.get_todays_games()
+        return games
+    except Exception as e:
+        st.error(f"Error fetching game data: {e}")
+        return []
+
+@st.cache_data(ttl=600, show_spinner=False)  # Cache weather data for 10 minutes
+def get_weather_data_for_game(game_pk, coordinates, game_datetime, stadium_name, game_status, weather_api_key):
+    """Get weather data for a specific game, but only if game is not finished."""
+    # Don't fetch new weather for finished games
+    if game_status in ["Final", "Game Over"]:
+        return None
+    
+    if not coordinates:
+        return None
+        
+    try:
+        if weather_api_key:
+            weather_fetcher = WeatherFetcher(weather_api_key)
+            weather = weather_fetcher.get_weather_for_game(
+                coordinates, 
+                game_datetime,
+                stadium_name,
+                game_status)
+        else:
+            # Use mock weather data if no API key
+            weather = get_mock_weather(stadium_name, game_status)
+        
+        return weather
+    except Exception as e:
+        print(f"Error fetching weather for game {game_pk}: {e}")
+        return None
+
+def get_stored_final_weather(game_pk):
+    """Get stored weather data for finished games."""
+    if 'final_weather_cache' not in st.session_state:
+        st.session_state.final_weather_cache = {}
+    
+    return st.session_state.final_weather_cache.get(game_pk)
+
+def store_final_weather(game_pk, weather_data):
+    """Store weather data for a game that just finished."""
+    if 'final_weather_cache' not in st.session_state:
+        st.session_state.final_weather_cache = {}
+    
+    st.session_state.final_weather_cache[game_pk] = weather_data
+
+def get_games_data():
+    """Get complete games data with appropriate caching for games and weather."""
+    try:
+        # Get fresh game data (30 second cache)
+        games = get_games_data_only()
+        
+        # Initialize weather components
         weather_api_key = st.secrets.get("OPENWEATHER_API_KEY", None)
         weather_fetcher = WeatherFetcher(weather_api_key)
         
-        # Fetch MLB games
-        games = mlb_fetcher.get_todays_games()
-        
-        # Fetch weather for each game
+        # Process each game
         games_with_weather = []
         for game in games:
-            if game['coordinates'] and weather_api_key:
-                weather = weather_fetcher.get_weather_for_game(
-                    game['coordinates'], 
+            game_pk = game.get('game_pk')
+            
+            # Handle weather data based on game status
+            if game['status'] in ["Final", "Game Over"]:
+                # Try to get stored weather for finished games
+                weather = get_stored_final_weather(game_pk)
+                if not weather and game['coordinates']:
+                    # If no stored weather, get mock data as fallback
+                    weather = get_mock_weather(game['stadium_name'], game['status'])
+            else:
+                # For active/upcoming games, get fresh weather data
+                weather = get_weather_data_for_game(
+                    game_pk,
+                    game['coordinates'],
                     game['game_datetime'],
                     game['stadium_name'],
-                    game['status'])
-            else:
-                # Use mock weather data if no API key or coordinates
-                weather = get_mock_weather(
-                    game['stadium_name'], 
-                    game['status']) if game['coordinates'] else None
+                    game['status'],
+                    weather_api_key
+                )
+                
+                # If game just finished, store its weather data
+                if game['status'] in ["Final", "Game Over"] and weather:
+                    store_final_weather(game_pk, weather)
             
+            # Format weather string
             game['weather'] = weather
             if weather:
                 game['weather_str'] = weather_fetcher.format_weather_string_with_stadium(
@@ -334,12 +397,8 @@ def main():
         # Show cache status
         cache_time = get_cache_timestamp()
         st.caption(f"🕐 Data cached at: {cache_time}")
-        eastern_tz = timezone(timedelta(hours=-4))
-        current_hour = datetime.now(eastern_tz).hour
-        if 3 <= current_hour < 10:
-            st.caption("⏱️ Quiet hours (3am-10am) - minimal refreshing")
-        else:
-            st.caption("⏱️ Auto-refreshes every 10 minutes")
+        st.caption("⏱️ Games: 30s | Weather: 10min")
+        st.caption("🏁 Final games keep last weather")
     
     # Track user activity (prevents cache refresh when no users are active)
     track_user_activity()
@@ -470,8 +529,8 @@ def main():
         <p><strong>📊 Game Summary:</strong> {len(games)} total games | {total_home_runs} home runs hit today</p>
         <p><strong>🕐 Time Zone:</strong> All times displayed in Eastern Time</p>
         <p><strong>⚾ Features:</strong> Real-time scores, home run tracking, and physics-based weather analysis</p>
-        <p><strong>💾 Smart Caching:</strong> Data cached at {cache_time} | Shared across all users | 10min refresh (quiet 3am-10am ET)</p>
-        <p><strong>🔄 Automatic Updates:</strong> Refreshes every 10 minutes during active hours | No refresh 3am-10am Eastern</p>
+        <p><strong>💾 Smart Caching:</strong> Game data: 30s refresh | Weather data: 10min refresh | Final games preserve weather</p>
+        <p><strong>🔄 Live Updates:</strong> Game scores and innings update every 30 seconds | Weather updates every 10 minutes for active games only</p>
     </div>
     """, unsafe_allow_html=True)
 
