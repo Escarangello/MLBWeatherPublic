@@ -49,6 +49,9 @@ class MLBGameFetcher:
             # Extract basic game info
             away_team = game_data['teams']['away']['team']['name']
             home_team = game_data['teams']['home']['team']['name']
+            away_team_abbr = game_data['teams']['away']['team'].get('abbreviation', '')
+            home_team_abbr = game_data['teams']['home']['team'].get('abbreviation', '')
+            game_pk = game_data.get('gamePk')
             
             # Get game status first
             status = game_data.get('status', {}).get('detailedState', 'Scheduled')
@@ -80,7 +83,7 @@ class MLBGameFetcher:
             else:
                 game_time = "TBD"
             
-            # Get score and inning information for live games
+            # Get score and inning information for live and final games
             score_info = ""
             if status in ["In Progress", "Live"]:
                 try:
@@ -101,6 +104,13 @@ class MLBGameFetcher:
                 except (KeyError, TypeError):
                     # If score data is not available
                     pass
+            elif status in ["Final", "Game Over"]:
+                try:
+                    away_score = game_data['teams']['away'].get('score', 0)
+                    home_score = game_data['teams']['home'].get('score', 0)
+                    score_info = f" - Final: {away_score}-{home_score}"
+                except (KeyError, TypeError):
+                    pass
             
             # Get venue information
             venue = game_data.get('venue', {})
@@ -109,15 +119,24 @@ class MLBGameFetcher:
             # Get coordinates for weather lookup
             coordinates = get_stadium_coordinates(stadium_name)
             
+            # Get home run information if available
+            home_runs_info = []
+            if game_pk and status in ["In Progress", "Live", "Final", "Game Over"]:
+                home_runs_info = self._get_home_runs_for_game(game_pk)
+            
             return {
                 'away_team': away_team,
                 'home_team': home_team,
+                'away_team_abbr': away_team_abbr,
+                'home_team_abbr': home_team_abbr,
                 'game_time': game_time,
                 'stadium_name': stadium_name,
                 'coordinates': coordinates,
                 'status': status,
                 'game_datetime': game_datetime,
-                'score_info': score_info
+                'score_info': score_info,
+                'home_runs': home_runs_info,
+                'game_pk': game_pk
             }
             
         except KeyError as e:
@@ -126,6 +145,60 @@ class MLBGameFetcher:
         except Exception as e:
             print(f"Unexpected error parsing game data: {e}")
             return None
+    
+    def _get_home_runs_for_game(self, game_pk):
+        """
+        Fetch home run data for a specific game.
+        """
+        try:
+            url = f"{self.base_url}/game/{game_pk}/playByPlay"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            home_runs = []
+            plays = data.get('allPlays', [])
+            
+            for play in plays:
+                result = play.get('result', {})
+                if result.get('eventType') == 'home_run':
+                    # Get batter info
+                    batter = play.get('matchup', {}).get('batter', {})
+                    batter_name = batter.get('fullName', 'Unknown')
+                    
+                    # Get team info
+                    batting_team = play.get('about', {}).get('halfInning', '')
+                    if batting_team == 'top':
+                        team_type = 'away'
+                    else:
+                        team_type = 'home'
+                    
+                    # Get inning
+                    inning = play.get('about', {}).get('inning', 0)
+                    
+                    # Get description for distance if available
+                    description = result.get('description', '')
+                    distance = None
+                    if 'feet' in description:
+                        # Try to extract distance from description
+                        import re
+                        distance_match = re.search(r'(\d+)\s*feet', description)
+                        if distance_match:
+                            distance = int(distance_match.group(1))
+                    
+                    home_runs.append({
+                        'batter': batter_name,
+                        'team_type': team_type,
+                        'inning': inning,
+                        'description': description,
+                        'distance': distance
+                    })
+            
+            return home_runs
+            
+        except Exception as e:
+            print(f"Error fetching home run data for game {game_pk}: {e}")
+            return []
 
 def test_mlb_api():
     """
@@ -140,6 +213,8 @@ def test_mlb_api():
         print(f"    Stadium: {game['stadium_name']}")
         print(f"    Coordinates: {game['coordinates']}")
         print(f"    Status: {game['status']}")
+        if game.get('home_runs'):
+            print(f"    Home runs: {len(game['home_runs'])}")
         print()
 
 if __name__ == "__main__":
