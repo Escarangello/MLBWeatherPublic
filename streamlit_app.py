@@ -488,52 +488,29 @@ def main():
                 game.get('away_team_abbr', game['away_team'][:3]), 
                 game.get('home_team_abbr', game['home_team'][:3])
             )
-            home_runs_html = f"""
-            <div class="home-runs-info">
-                ⚾ <strong>Home Runs ({len(home_runs)}):</strong><br>
-                {hr_display}
-            </div>
-            """
+            home_runs_html = f'<div class="home-runs-info">⚾ <strong>Home Runs ({len(home_runs)}):</strong><br>{hr_display}</div>'
         elif game['status'] in ["In Progress", "Live", "Final", "Game Over"]:
-            home_runs_html = """
-            <div class="home-runs-info">
-                ⚾ <strong>Home Runs:</strong> None hit yet
-            </div>
-            """
+            home_runs_html = '<div class="home-runs-info">⚾ <strong>Home Runs:</strong> None hit yet</div>'
         
         # Weather information
         weather_html = ""
         if game['weather_str']:
-            weather_html = f"""
-            <div class="weather-info">
-                🌤️ <strong>Weather:</strong> {game['weather_str']}
-            </div>
-            """
+            weather_html = f'<div class="weather-info">🌤️ <strong>Weather:</strong> {game["weather_str"]}</div>'
         else:
-            weather_html = """
-            <div class="weather-info">
-                🌤️ <strong>Weather:</strong> Weather data unavailable
-            </div>
-            """
+            weather_html = '<div class="weather-info">🌤️ <strong>Weather:</strong> Weather data unavailable</div>'
         
-        # Combine everything into a single markdown block
-        complete_card_html = f"""
-        <div class="{card_class}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                <div style="flex: 1;">
-                    {teams_display}
-                </div>
-                <div style="text-align: right;">
-                    {time_display}
-                </div>
-            </div>
-            {stadium_info}
-            {home_runs_html}
-            {weather_html}
-        </div>
-        """
+        # Combine everything into a single markdown block - no indentation
+        complete_card_html = f'''<div class="{card_class}">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+<div style="flex: 1;">{teams_display}</div>
+<div style="text-align: right;">{time_display}</div>
+</div>
+{stadium_info}
+{home_runs_html}
+{weather_html}
+</div>'''
         
-        st.markdown(textwrap.dedent(complete_card_html), unsafe_allow_html=True)
+        st.markdown(complete_card_html, unsafe_allow_html=True)
     
     # Footer with cache information
     st.markdown("---")
