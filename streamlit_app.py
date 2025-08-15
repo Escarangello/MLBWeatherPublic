@@ -214,6 +214,12 @@ def get_cache_ttl():
     else:
         return 600  # 10 minutes in seconds during active hours
 
+@st.cache_data(ttl=86400, show_spinner=False)  # Cache finished game weather for 24 hours
+def get_finished_game_weather(coordinates, game_datetime, stadium_name, game_pk, weather_api_key):
+    """Get weather data for finished games - cache for entire day since conditions are historical."""
+    weather_fetcher = WeatherFetcher(weather_api_key)
+    return weather_fetcher.get_weather_for_game(coordinates, game_datetime, stadium_name, "Final")
+
 @st.cache_data(ttl=600, show_spinner=False)  # Cache for 10 minutes - shared across all users
 def get_games_data():
     """Get games data with caching to avoid API rate limits. Only refreshes when users are active."""
