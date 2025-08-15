@@ -337,7 +337,7 @@ def track_user_activity():
     return True
 
 def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
-    """Format home run information for display."""
+    """Format home run information for display as HTML."""
     if not home_runs:
         return "No home runs hit yet"
     
@@ -348,7 +348,7 @@ def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
     if away_hrs:
         # Use fallback if abbreviation is empty
         team_name = away_team_abbr if away_team_abbr else "Away"
-        away_text = f"**{team_name}:** "
+        away_text = f"<strong>{team_name}:</strong> "
         away_details = []
         for hr in away_hrs:
             detail = f"{hr['batter']} (Inning {hr['inning']})"
@@ -361,7 +361,7 @@ def format_home_runs_display(home_runs, away_team_abbr, home_team_abbr):
     if home_hrs:
         # Use fallback if abbreviation is empty
         team_name = home_team_abbr if home_team_abbr else "Home"
-        home_text = f"**{team_name}:** "
+        home_text = f"<strong>{team_name}:</strong> "
         home_details = []
         for hr in home_hrs:
             detail = f"{hr['batter']} (Inning {hr['inning']})"
