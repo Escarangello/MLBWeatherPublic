@@ -498,7 +498,7 @@ def main():
         cache_time = get_cache_timestamp()
         st.caption(f"🕐 Data cached at: {cache_time}")
         st.caption("⏱️ Games: 30s | Weather: Smart")
-        st.caption("📅 Scheduled: Forecast once | 🔴 Live: 10min")
+        st.caption("📅 Scheduled: Forecast once | 🔴 Live: 30min")
     
     # Track user activity (prevents cache refresh when no users are active)
     track_user_activity()
@@ -626,4 +626,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
