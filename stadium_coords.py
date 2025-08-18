@@ -50,42 +50,42 @@ STADIUM_COORDINATES = {
 # These are more accurate orientations based on actual ballpark layouts
 STADIUM_ORIENTATIONS = {
     # American League
-    "Fenway Park": 45,  # ENE (Green Monster creates unique layout)
-    "Yankee Stadium": 65,  # E-ESE
-    "Tropicana Field": 57,  # E (indoor, standard orientation)
+    "Fenway Park": 65,  # ENE (Green Monster creates unique layout)
+    "Yankee Stadium": 95,  # E-ESE
+    "Tropicana Field": 90,  # E (indoor, standard orientation)
     "Rogers Centre": 90,  # E (indoor, standard orientation)
-    "Oriole Park at Camden Yards": 30,  # ENE
+    "Oriole Park at Camden Yards": 70,  # ENE
     
-    "Progressive Field": 0,  # E-ENE
-    "Comerica Park": 152,  # E-ENE
-    "Guaranteed Rate Field": 125,  # E
-    "Kauffman Stadium": 30,  # E
-    "Target Field": 90,  # ESE
+    "Progressive Field": 80,  # E-ENE
+    "Comerica Park": 85,  # E-ENE
+    "Guaranteed Rate Field": 90,  # E
+    "Kauffman Stadium": 90,  # E
+    "Target Field": 105,  # ESE
     
-    "Daikin Park": 350,  # ESE (left field wall creates unique angles)
-    "Angel Stadium": 30,  # E
-    "Sutter Health Park": 45,  # ENE
-    "T-Mobile Park": 30,  # E
-    "Globe Life Field": 138,  # E
+    "Daikin Park": 105,  # ESE (left field wall creates unique angles)
+    "Angel Stadium": 90,  # E
+    "Sutter Health Park": 65,  # ENE
+    "T-Mobile Park": 90,  # E
+    "Globe Life Field": 90,  # E
     
     # National League
-    "Truist Park": 150,  # E
-    "loanDepot park": 135,  # E
-    "Citi Field": 15,  # E
-    "Citizens Bank Park": 10,  # E
-    "Nationals Park": 27,  # E
+    "Truist Park": 90,  # E
+    "loanDepot park": 90,  # E
+    "Citi Field": 90,  # E
+    "Citizens Bank Park": 90,  # E
+    "Nationals Park": 90,  # E
     
-    "Wrigley Field": 42,  # E (classic orientation)
-    "Great American Ball Park": 130,  # E
-    "American Family Field": 126,  # E
-    "PNC Park": 120,  # E-ENE (river creates slight angle)
-    "Busch Stadium": 60,  # E
+    "Wrigley Field": 90,  # E (classic orientation)
+    "Great American Ball Park": 90,  # E
+    "American Family Field": 90,  # E
+    "PNC Park": 85,  # E-ENE (river creates slight angle)
+    "Busch Stadium": 90,  # E
     
-    "Chase Field": 0,  # E (indoor, standard orientation)
-    "Coors Field": 0,  # E
-    "Dodger Stadium": 23,  # E
-    "Petco Park": 0,  # E
-    "Oracle Park": 90,  # SW (unique orientation due to bay location)
+    "Chase Field": 90,  # E (indoor, standard orientation)
+    "Coors Field": 90,  # E
+    "Dodger Stadium": 90,  # E
+    "Petco Park": 90,  # E
+    "Oracle Park": 225,  # SW (unique orientation due to bay location)
 }
 
 def get_stadium_coordinates(stadium_name):
@@ -107,6 +107,4 @@ def get_all_stadiums():
     Get all stadium names.
     """
     return list(STADIUM_COORDINATES.keys())
-
-
 
