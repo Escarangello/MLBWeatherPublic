@@ -50,23 +50,23 @@ STADIUM_COORDINATES = {
 # These are more accurate orientations based on actual ballpark layouts
 STADIUM_ORIENTATIONS = {
     # American League
-    "Fenway Park": 65,  # ENE (Green Monster creates unique layout)
-    "Yankee Stadium": 95,  # E-ESE
-    "Tropicana Field": 90,  # E (indoor, standard orientation)
+    "Fenway Park": 45,  # ENE (Green Monster creates unique layout)
+    "Yankee Stadium": 65,  # E-ESE
+    "Tropicana Field": 57,  # E (indoor, standard orientation)
     "Rogers Centre": 90,  # E (indoor, standard orientation)
-    "Oriole Park at Camden Yards": 70,  # ENE
+    "Oriole Park at Camden Yards": 30,  # ENE
     
-    "Progressive Field": 80,  # E-ENE
-    "Comerica Park": 85,  # E-ENE
-    "Guaranteed Rate Field": 90,  # E
-    "Kauffman Stadium": 90,  # E
-    "Target Field": 105,  # ESE
+    "Progressive Field": 0,  # E-ENE
+    "Comerica Park": 152,  # E-ENE
+    "Guaranteed Rate Field": 125,  # E
+    "Kauffman Stadium": 30,  # E
+    "Target Field": 90,  # ESE
     
-    "Daikin Park": 105,  # ESE (left field wall creates unique angles)
-    "Angel Stadium": 90,  # E
-    "Sutter Health Park": 65,  # ENE
-    "T-Mobile Park": 90,  # E
-    "Globe Life Field": 90,  # E
+    "Daikin Park": 350,  # ESE (left field wall creates unique angles)
+    "Angel Stadium": 30,  # E
+    "Sutter Health Park": 45,  # ENE
+    "T-Mobile Park": 30,  # E
+    "Globe Life Field": 138,  # E
     
     # National League
     "Truist Park": 90,  # E
@@ -107,4 +107,5 @@ def get_all_stadiums():
     Get all stadium names.
     """
     return list(STADIUM_COORDINATES.keys())
+
 
